@@ -1,6 +1,5 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
-# from __future__ import print_function
 import os
 import tornado.ioloop
 import tornado.web
@@ -28,27 +27,25 @@ class BaseHandler(tornado.web.RequestHandler):
 class IndexHandler(BaseHandler):
     @tornado.web.authenticated
 
-    def get(self):
+    def get(self,to_id):
         db_session = maker()
         from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
-        to_query = 2#前のページから引き継ぎたい
         containers = []
-        contents = db_session.query(Content).filter(Content.from_id==from_query.id, Content.to_id==to_query).all()
+        contents = db_session.query(Content).filter(Content.from_id==from_query.id, Content.to_id==to_id).all()
         db_session.close()
         for row in contents:
             containers.append(row.content)
-        self.render("index.html", containers=containers, from_id=from_query.id, to_id=to_query)
+        self.render("index.html", containers=containers, from_id=from_query.id, to_id=to_id)
 
-    def post(self):
+    def post(self,to_id):
         db_session = maker()
         body = self.get_argument('body')
         from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
-        to_id = 2
         new_content = Content(from_id=from_query.id,to_id=to_id,content=body)
         db_session.add(new_content)
         db_session.commit()
         db_session.close()
-        self.redirect('/?to_id=%d'%(to_id))
+        self.redirect('/%s'%(to_id))
 
 class SelectHandler(BaseHandler):
     @tornado.web.authenticated
@@ -62,7 +59,7 @@ class SelectHandler(BaseHandler):
         users = db_session.query(User).filter(User.name==playername).all()
         db_session.close()
         if users:
-            self.redirect('/?to_id=%s'%(users[0].id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
+            self.redirect('/%s'%(users[0].id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
         else:
             self.write_error(403)
 
@@ -92,7 +89,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         handlers = [
-            (r'/', IndexHandler),
+            (r'/([0-9]+)', IndexHandler),
             (r'/login', LoginHandler),
             (r'/logout', LogoutHandler),
             (r'/select', SelectHandler),
