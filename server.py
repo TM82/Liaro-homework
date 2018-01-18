@@ -6,14 +6,14 @@ import tornado.ioloop
 import tornado.web
 from tornado.web import url
 import sqlalchemy as sa
-import logging
+from settings import maker
+from models import *
 
 class BaseHandler(tornado.web.RequestHandler):
     cookie_username = "username" #初期値？
 
     def get_current_user(self):
         username = self.get_secure_cookie(self.cookie_username)
-        logging.debug('BaseHandler - username: %s' % username)
         if not username: return None
         return tornado.escape.utf8(username)
 
@@ -29,39 +29,42 @@ class IndexHandler(BaseHandler):
     @tornado.web.authenticated
 
     def get(self):
-        db_url = 'mysql+pymysql://root:mydearest21@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb?charset=utf8'
-        engine = sa.create_engine(db_url, echo=True)
-        logging.debug(self.get_current_user)
-        from_id = engine.execute('SELECT id FROM users WHERE name = %s',self.get_current_user)
-        to_id = 2 #とりあえず
-        rows = engine.execute('SELECT content FROM contents WHERE from_id = %d AND to_id = %d'%(from_id,to_id))
-
-        self.render("index.html", containers=rows, from_id=from_id, to_id=to_id)
+        db_session = maker()
+        from_id = 1#前のページから引き継ぎたい
+        to_id = 2#前のページから引き継ぎたい
+        containers = []
+        contents = db_session.query(Content).filter(Content.from_id==from_id, Content.to_id==to_id).all()
+        db_session.close()
+        for row in contents:
+            containers.append(row.content)
+        self.render("index.html", containers=containers, from_id=from_id, to_id=to_id)
 
     def post(self):
-        db_url = 'mysql+pymysql://root:mydearest21@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb?charset=utf8'
-        engine = sa.create_engine(db_url, echo=True)
         body = self.get_argument('body')
-        ins = 'INSERT INTO contents (from_id,to_id,content) VALUES (%s,%s,%s)'
-        engine.execute(ins,from_id,to_id,body)
+        from_id = 1
+        to_id = 2
+        db_session = maker()
+        new_content = Content(from_id=from_id,to_id=to_id,content=body)
+        db_session.add(new_content)
+        db_session.commit()
+        db_session.close()
 
-        self.redirect("/?from_id=%d&to_id=%d"%(from_id,to_id))
+        self.redirect('/?to_id=%d'%(to_id))
 
 class SelectHandler(BaseHandler):
     @tornado.web.authenticated
 
     def get(self):
-        self.render("select_player.html", username=self.get_current_user)
+        self.render("select_player.html", username=self.current_user)
 
     def post(self):
         playername = self.get_argument("playername")
-        logging.debug('SelectHandler:post %s'% (playername))
-        db_url = 'mysql+pymysql://root:mydearest21@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb?charset=utf8'
-        engine = sa.create_engine(db_url, echo=True)
-        to_id = engine.execute('SELECT id FROM users WHERE name = %s',playername)
-        if len(list(to_id)) > 0:
-            for x in to_id:
-                self.redirect('/?to_id=%s'%(x.id))
+        db_session = maker()
+        users = db_session.query(User).all()
+        db_session.close()
+        for row in users:
+            if playername in row.name:
+                self.redirect('/?to_id=%s'%(row.id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
         else:
             self.write_error(403)
 
@@ -71,23 +74,21 @@ class LoginHandler(BaseHandler):
 
     def post(self):
         username = self.get_argument("username")
-
-        logging.debug('LoginHandler:post %s' % (username))
-
-        db_url = 'mysql+pymysql://root:mydearest21@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb?charset=utf8'
-        engine = sa.create_engine(db_url, echo=True)
-        users = engine.execute('SELECT name FROM users WHERE name = %s',username)
+        db_session = maker()
+        users = db_session.query(User).all()
+        db_session.close()
         for row in users:
             if username in row.name:
                 self.set_current_user(username)
                 self.redirect("/select")
-        self.write(users,username)
+        self.write('select existing user\n')
         self.write_error(403)
 
 class LogoutHandler(BaseHandler):
     def get(self):
         self.clear_current_user()
         self.redirect('/login')
+
 
 class Application(tornado.web.Application):
     def __init__(self):
