@@ -1,0 +1,18 @@
+
+<!DOCTYPE HTML>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
+  </head>
+  <body>
+    <h1>Login</h1>
+    <form action="/login" method="post">
+      <!-- {% module xsrf_form_html() %} -->
+      <p>username : <input type="text" name="username"/></p>
+      <!-- <p>password : <input type="password" name="password"/></p> -->
+      <input type="submit" value="Login!"/>
+    </form>
+  </body>
+</html>
