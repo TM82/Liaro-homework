@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
   </head>
   <body>
+    <br><br><br>
     {% for container in containers %}
       <div class="chat-box">
         <div class="chat-area">
@@ -15,16 +16,11 @@
       </div>
     {% end %}
 
-
-        <!--  参照した行の数だけboxを生成する　-->
-        <!--  各boxに投稿された文章を表示する　-->
-
-
     <div id="container">
       <div id="box">
         <form method="post" action="/">
           <textarea name="body" cols="40" rows="4"></textarea>
-          <input type="submit" onclick="window.location.reload();">
+          <input type="submit">
         </form>
       </div>
     </div>

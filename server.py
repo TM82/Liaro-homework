@@ -1,6 +1,6 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+# from __future__ import print_function
 import os
 import tornado.ioloop
 import tornado.web
@@ -30,25 +30,24 @@ class IndexHandler(BaseHandler):
 
     def get(self):
         db_session = maker()
-        from_id = 1#前のページから引き継ぎたい
-        to_id = 2#前のページから引き継ぎたい
+        from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
+        to_query = 2#前のページから引き継ぎたい
         containers = []
-        contents = db_session.query(Content).filter(Content.from_id==from_id, Content.to_id==to_id).all()
+        contents = db_session.query(Content).filter(Content.from_id==from_query.id, Content.to_id==to_query).all()
         db_session.close()
         for row in contents:
             containers.append(row.content)
-        self.render("index.html", containers=containers, from_id=from_id, to_id=to_id)
+        self.render("index.html", containers=containers, from_id=from_query.id, to_id=to_query)
 
     def post(self):
-        body = self.get_argument('body')
-        from_id = 1
-        to_id = 2
         db_session = maker()
-        new_content = Content(from_id=from_id,to_id=to_id,content=body)
+        body = self.get_argument('body')
+        from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
+        to_id = 2
+        new_content = Content(from_id=from_query.id,to_id=to_id,content=body)
         db_session.add(new_content)
         db_session.commit()
         db_session.close()
-
         self.redirect('/?to_id=%d'%(to_id))
 
 class SelectHandler(BaseHandler):
@@ -60,11 +59,10 @@ class SelectHandler(BaseHandler):
     def post(self):
         playername = self.get_argument("playername")
         db_session = maker()
-        users = db_session.query(User).all()
+        users = db_session.query(User).filter(User.name==playername).all()
         db_session.close()
-        for row in users:
-            if playername in row.name:
-                self.redirect('/?to_id=%s'%(row.id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
+        if users:
+            self.redirect('/?to_id=%s'%(users[0].id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
         else:
             self.write_error(403)
 
@@ -75,14 +73,14 @@ class LoginHandler(BaseHandler):
     def post(self):
         username = self.get_argument("username")
         db_session = maker()
-        users = db_session.query(User).all()
+        users = db_session.query(User).filter(User.name==username).all()
         db_session.close()
-        for row in users:
-            if username in row.name:
-                self.set_current_user(username)
-                self.redirect("/select")
-        self.write('select existing user\n')
-        self.write_error(403)
+        if users:
+            self.set_current_user(username)
+            self.redirect("/select")
+        else:
+            self.write('select existing user\n')
+            self.write_error(403)
 
 class LogoutHandler(BaseHandler):
     def get(self):
