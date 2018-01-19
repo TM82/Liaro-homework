@@ -6,15 +6,25 @@
   </head>
   <body>
     <br><br><br>
-    {% for container in containers %}
+
+
       <div class="chat-box">
-        <div class="chat-area">
+        <div class="chat-from">
+          {% for container in containers_from %}
           <div class="hukidashi">
             {{ container }}
           </div>
+          {% end %}
+        </div>
+        <div class="chat-to">
+          {% for container in containers_to %}
+          <div class="hukidashi">
+            {{ container }}
+          </div>
+          {% end %}
         </div>
       </div>
-    {% end %}
+
 
     <div id="container">
       <div id="box">

@@ -6,20 +6,28 @@ body {
 
 /* チャットレイアウト */
 .chat-box {
-    width: 100%;
+    width: 50%;
     height: auto;
     overflow: hidden; /*floatの解除*/
     margin-bottom: 20px;
 }
 
-.chat-area {
-    width: 100%;
+.chat-from, .chat-to {
+    width: 50%;
+    height: auto;
+}
+
+.chat-from{
+    float: left;
+}
+
+.chat-to{
     float: right;
 }
-.chat-hukidashi {
+.hukidashi {
     display: inline-block; /*コメントの文字数に合わせて可変*/
     padding: 15px 20px;
-    margin-left: 120px;
+    /* margin-left: 120px; */
     margin-top: 10px;
     border: 1px solid gray;
     border-radius: 10px;
