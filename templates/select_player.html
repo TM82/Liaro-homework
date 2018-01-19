@@ -8,11 +8,33 @@
   <body>
     <h4>Hello, {{ username }}</h4>
     <h1>select player</h1>
-    <form action="/select" method="post">
-      <!-- {% module xsrf_form_html() %} -->
+
+    <div class="user-box">
+      {% for player_name in players %}
+        <div class="user">
+          <form action="/select" method="post">
+            <button type=submit name=playername value={{ player_name.name }} >{{ player_name.name }}</button>
+          </form>
+        </div>
+      {% end %}
+    </div>
+    
+    <!-- <form action="/select" method="post">
       <p>playername : <input type="text" name="playername"/></p>
-      <!-- <p>password : <input type="password" name="password"/></p> -->
       <input type="submit" value="Begin"/>
-    </form>
+    </form> -->
+
+    <div class="option-box">
+      <div class="option">
+          <button type=button onclick="location.href='/login'">
+            ログインページへ
+          </button>
+      </div>
+      <div class="option">
+          <button type=button onclick="location.href='/logout'">
+            ログアウト
+          </button>
+      </div>
+    </div>
   </body>
 </html>

@@ -1,0 +1,30 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>Create New User</title>
+    <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
+  </head>
+  <body>
+    <h1>Create New User</h1>
+    <form action="/create_user/" method="post">
+      <!-- {% module xsrf_form_html() %} -->
+      <p>new username : <input type="text" name="username" value={{ username }}></p>
+      <!-- <p>password : <input type="password" name="password"/></p> -->
+      <input type="submit" value="Create!"/>
+    </form>
+
+    <div class="option-box">
+      <div class="option">
+          <button type=button onclick="location.href='/login'">
+            戻る
+          </button>
+      </div>
+      <div class="option">
+          <button type=button onclick="location.href='/logout'">
+            ログアウト
+          </button>
+      </div>
+    </div>
+  </body>
+</html>

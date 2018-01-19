@@ -32,6 +32,7 @@ class IndexHandler(BaseHandler):
     def get(self,to_id):
         db_session = maker()
         from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
+        to_query = db_session.query(User).filter(User.id==to_id).first()
         containers_from = []
         containers_to = []
         contents_from = db_session.query(Content).filter(Content.from_id==from_query.id, Content.to_id==to_id).all()
@@ -41,7 +42,7 @@ class IndexHandler(BaseHandler):
             containers_from.append(row.content)
         for row in contents_to:
             containers_to.append(row.content)
-        self.render("index.html", containers_from=containers_from, containers_to=containers_to,from_id=from_query.id, to_id=to_id)
+        self.render("index.html", containers_from=containers_from, containers_to=containers_to,from_id=from_query.id,to_id=to_id,from_name=from_query.name,to_name=to_query.name)
 
     def post(self,to_id):
         db_session = maker()
@@ -58,7 +59,9 @@ class SelectHandler(BaseHandler):
     @tornado.web.authenticated
 
     def get(self):
-        self.render("select_player.html", username=self.current_user)
+        db_session=maker()
+        players_query = db_session.query(User).filter(User.name!=self.current_user).all()
+        self.render("select_player.html", username=self.current_user, players=players_query)
 
     def post(self):
         playername = self.get_argument("playername")
@@ -68,7 +71,21 @@ class SelectHandler(BaseHandler):
         if users:
             self.redirect('/%s'%(users[0].id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
         else:
+            self.write("choose existing user\n")
             self.write_error(403)
+
+class CreateUserHandler(BaseHandler):
+    def get(self,username):
+        self.render("create_user.html", username=username)
+
+    def post(self,username):
+        username = self.get_argument("username")
+        db_session = maker()
+        new_user = User(name=username)
+        db_session.add(new_user)
+        db_session.commit()
+        db_session.close()
+        self.redirect('/login')
 
 class LoginHandler(BaseHandler):
     def get(self):
@@ -83,8 +100,9 @@ class LoginHandler(BaseHandler):
             self.set_current_user(username)
             self.redirect("/select")
         else:
-            self.write('select existing user\n')
-            self.write_error(403)
+            self.redirect('/create_user/%s'%(username))
+            # self.write('select existing user\n')
+            # self.write_error(403)
 
 class LogoutHandler(BaseHandler):
     def get(self):
@@ -100,6 +118,7 @@ class Application(tornado.web.Application):
             (r'/login', LoginHandler),
             (r'/logout', LogoutHandler),
             (r'/select', SelectHandler),
+            (r'/create_user/(.*)', CreateUserHandler)
         ]
         settings = dict(
             cookie_secret='gaofjawpoer940r34823842398429afadfi4iiad',

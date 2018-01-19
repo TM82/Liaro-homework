@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>{{ from_id }} から {{ to_id }}へのチャット</title>
+    <title>{{ from_name }} から {{ to_name }}へのチャット</title>
     <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
   </head>
   <body>
     <br><br><br>
-
+    あなたは{{ from_name }}でログインしています。<br>
+    {{ to_name }}　との会話中
 
       <div class="chat-box">
         <div class="chat-from">
@@ -26,12 +27,25 @@
       </div>
 
 
-    <div id="container">
-      <div id="box">
+    <div class="container">
+      <div class="box">
         <form method="post" action="/{{ to_id }}">
           <textarea name="body" cols="40" rows="4"></textarea>
           <input type="submit">
         </form>
+      </div>
+    </div>
+
+    <div class="option-box">
+      <div class="option">
+          <button type=button onclick="location.href='/select'">
+            相手を選択
+          </button>
+      </div>
+      <div class="option">
+          <button type=button onclick="location.href='/logout'">
+            ログアウト
+          </button>
       </div>
     </div>
   </body>

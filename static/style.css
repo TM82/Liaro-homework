@@ -4,17 +4,27 @@ body {
   margin: 0 auto;
 }
 
+.user-box{
+  margin-bottom: 10px;
+}
+
+.user{
+  padding: 10px 10px;
+}
 /* チャットレイアウト */
 .chat-box {
     width: 50%;
     height: auto;
     overflow: hidden; /*floatの解除*/
     margin-bottom: 20px;
+    border: 1px solid blue;
+    border-radius: 10px;
 }
 
 .chat-from, .chat-to {
-    width: 50%;
+    width: 49%;
     height: auto;
+
 }
 
 .chat-from{
@@ -23,12 +33,17 @@ body {
 
 .chat-to{
     float: right;
+    text-align : right;
 }
 .hukidashi {
     display: inline-block; /*コメントの文字数に合わせて可変*/
-    padding: 15px 20px;
+    padding: 15px 15px;
     /* margin-left: 120px; */
-    margin-top: 10px;
+    margin-top: 5px;
     border: 1px solid gray;
     border-radius: 10px;
+}
+
+.option{
+  padding:10px 10px;
 }
