@@ -80,12 +80,17 @@ class CreateUserHandler(BaseHandler):
 
     def post(self,username):
         username = self.get_argument("username")
-        db_session = maker()
-        new_user = User(name=username)
-        db_session.add(new_user)
-        db_session.commit()
-        db_session.close()
-        self.redirect('/login')
+        if username == "":
+            print("----------------------------------------------------")
+            print("blank is not allowable.")
+            self.redirect('/login')
+        else:
+            db_session = maker()
+            new_user = User(name=username)
+            db_session.add(new_user)
+            db_session.commit()
+            db_session.close()
+            self.redirect('/login')
 
 class LoginHandler(BaseHandler):
     def get(self):
