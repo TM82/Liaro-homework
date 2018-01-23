@@ -4,7 +4,7 @@ import sqlalchemy as sa
 DATABASE = 'mysql+pymysql://root:mydearest21@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb?charset=utf8'
 ENGINE = sa.create_engine(
     DATABASE,
-    encoding = "utf-8",
+    encoding="utf-8",
     echo=True
 )
 

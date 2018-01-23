@@ -6,79 +6,108 @@ import tornado.web
 from tornado.web import url
 import sqlalchemy as sa
 from settings import maker
-from models import *
+from models import User, Content
 import time
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    cookie_username = "username" #初期値？
+    cookie_username = "username"  # 初期値？
 
     def get_current_user(self):
         username = self.get_secure_cookie(self.cookie_username)
-        if not username: return None
+        if not username:
+            return None
         return tornado.escape.utf8(username)
 
+    def get_user_id(self, name):
+        db_session = maker()
+        user_query = db_session.query(User).filter(
+            User.name == name).first()
+        db_session.close()
+        if not user_query:
+            return None
+        return user_query.id
+
+    def get_a_user_query_from_db(self, user_id):
+        db_session = maker()
+        user_query = db_session.query(User).filter(
+            User.id == user_id).first()
+        db_session.close()
+        return user_query
+
+    def get_content_query_from_db(self, my_id, partner_id):
+        db_session = maker()
+        my_contents_query = db_session.query(Content).filter(
+            Content.from_id == my_id, Content.to_id == partner_id).all()
+        db_session.close()
+        return my_contents_query
+
     def set_current_user(self, username):
-        self.set_secure_cookie(self.cookie_username, tornado.escape.utf8(username))
+        self.set_secure_cookie(self.cookie_username,
+                               tornado.escape.utf8(username))
 
     def clear_current_user(self):
         self.clear_cookie(self.cookie_username)
 
 
-
 class IndexHandler(BaseHandler):
+
     @tornado.web.authenticated
+    def get(self, partner_id):
+        my_id = self.get_user_id(self.get_current_user())
+        my_user_query = self.get_a_user_query_from_db(my_id)
+        partner_user_query = self.get_a_user_query_from_db(partner_id)
+        my_contents_query = self.get_content_query_from_db(my_id, partner_id)
+        partner_contents_query = self.get_content_query_from_db(
+            partner_id, my_id)
+        my_containers = []
+        partner_containers = []
+        for row in my_contents_query:
+            my_containers.append(row.content)
+        for row in partner_contents_query:
+            partner_containers.append(row.content)
+        self.render("index.html", my_containers=my_containers, partner_containers=partner_containers,
+                    my_id=my_user_query.id, partner_id=partner_user_query.id, my_name=my_user_query.name, partner_name=partner_user_query.name)
 
-    def get(self,to_id):
-        db_session = maker()
-        from_query = db_session.query(User).filter(User.name==self.current_user).first() #前のページから引き継ぎたい
-        to_query = db_session.query(User).filter(User.id==to_id).first()
-        containers_from = []
-        containers_to = []
-        contents_from = db_session.query(Content).filter(Content.from_id==from_query.id, Content.to_id==to_id).all()
-        contents_to = db_session.query(Content).filter(Content.from_id==to_id, Content.to_id==from_query.id).all()
-        db_session.close()
-        for row in contents_from:
-            containers_from.append(row.content)
-        for row in contents_to:
-            containers_to.append(row.content)
-        self.render("index.html", containers_from=containers_from, containers_to=containers_to,from_id=from_query.id,to_id=to_id,from_name=from_query.name,to_name=to_query.name)
-
-    def post(self,to_id):
+    def post(self, partner_id):
         db_session = maker()
         body = self.get_argument('body')
-        from_query = db_session.query(User).filter(User.name==self.current_user).first()
+        my_user_query = self.get_a_user_query_from_db(
+            self.get_user_id(self.get_current_user()))
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S')
-        new_content = Content(from_id=from_query.id,to_id=to_id,content=body,datetime=time_stamp)
+        new_content = Content(from_id=my_user_query.id,
+                              to_id=partner_id, content=body, datetime=time_stamp)
         db_session.add(new_content)
         db_session.commit()
         db_session.close()
-        self.redirect('/%s'%(to_id))
+        self.redirect('/%s' % (partner_id))
+
 
 class SelectHandler(BaseHandler):
     @tornado.web.authenticated
-
     def get(self):
-        db_session=maker()
-        players_query = db_session.query(User).filter(User.name!=self.current_user).all()
-        self.render("select_player.html", username=self.current_user, players=players_query)
+        db_session = maker()
+        partner_query = db_session.query(User).filter(
+            User.name != self.current_user).all()
+        self.render("select_player.html",
+                    username=self.current_user, partners=partner_query)
 
     def post(self):
-        playername = self.get_argument("playername")
-        db_session = maker()
-        users = db_session.query(User).filter(User.name==playername).all()
-        db_session.close()
-        if users:
-            self.redirect('/%s'%(users[0].id)) #1つしかヒットしないのでOK?（同じユーザ名があるとout)
+        partner_id = self.get_argument("partner_id")
+        partner_query = self.get_a_user_query_from_db(partner_id)
+        if partner_query:
+            # 1つしかヒットしないのでOK?（同じユーザ名があるとout) > 外部制約で対応
+            self.redirect('/%s' % (partner_query.id))
         else:
             self.write("choose existing user\n")
             self.write_error(403)
 
+
 class CreateUserHandler(BaseHandler):
-    def get(self,username):
+    def get(self, username):
         self.render("create_user.html", username=username)
 
-    def post(self,username):
+    def post(self, username):
         username = self.get_argument("username")
         if username == "":
             print("----------------------------------------------------")
@@ -92,22 +121,22 @@ class CreateUserHandler(BaseHandler):
             db_session.close()
             self.redirect('/login')
 
+
 class LoginHandler(BaseHandler):
     def get(self):
         self.render("login.html")
 
     def post(self):
         username = self.get_argument("username")
-        db_session = maker()
-        users = db_session.query(User).filter(User.name==username).all()
-        db_session.close()
+        users = self.get_a_user_query_from_db(self.get_user_id(username))
         if users:
             self.set_current_user(username)
             self.redirect("/select")
         else:
-            self.redirect('/create_user/%s'%(username))
+            self.redirect('/create_user/%s' % (username))
             # self.write('select existing user\n')
             # self.write_error(403)
+
 
 class LogoutHandler(BaseHandler):
     def get(self):
@@ -130,12 +159,12 @@ class Application(tornado.web.Application):
             static_path=os.path.join(BASE_DIR, "static"),
             template_path=os.path.join(BASE_DIR, "templates"),
             login_url="/login",
-            #xsrf_cookies=True,
-            #autoescape="xhtml_escape",
+            # xsrf_cookies=True,
+            # autoescape="xhtml_escape",
             debug=True,
-            )
+        )
 
-        tornado.web.Application.__init__(self,handlers,**settings)
+        tornado.web.Application.__init__(self, handlers, **settings)
 
 
 if __name__ == '__main__':

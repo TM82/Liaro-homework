@@ -1,40 +1,39 @@
 <!DOCTYPE HTML>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8">
-    <title>select player</title>
-    <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
-  </head>
-  <body>
-    <h4>Hello, {{ username }}</h4>
-    <h1>select player</h1>
 
-    <div class="user-box">
-      {% for player_name in players %}
-        <div class="user">
-          <form action="/select" method="post">
-            <button type=submit name=playername value={{ player_name.name }} >{{ player_name.name }}</button>
-          </form>
-        </div>
-      {% end %}
+<head>
+  <meta charset="UTF-8">
+  <title>select player</title>
+  <link rel="stylesheet" href="{{ static_url(" style.css ") }}"/>
+</head>
+
+<body>
+  <h4>Hello, {{ username }}</h4>
+  <h1>select player</h1>
+
+  <div class="user-box">
+    {% for partner_name in partners %}
+    <div class="user">
+      <form action="/select" method="post">
+        <button type=submit name=partner_id value={{ partner_name.id }}>{{ partner_name.name }}</button>
+      </form>
     </div>
-    
-    <!-- <form action="/select" method="post">
-      <p>playername : <input type="text" name="playername"/></p>
-      <input type="submit" value="Begin"/>
-    </form> -->
+    {% end %}
+  </div>
 
-    <div class="option-box">
-      <div class="option">
-          <button type=button onclick="location.href='/login'">
+
+  <div class="option-box">
+    <div class="option">
+      <button type=button onclick="location.href='/login'">
             ログインページへ
           </button>
-      </div>
-      <div class="option">
-          <button type=button onclick="location.href='/logout'">
+    </div>
+    <div class="option">
+      <button type=button onclick="location.href='/logout'">
             ログアウト
           </button>
-      </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>

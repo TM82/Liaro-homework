@@ -1,52 +1,53 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>{{ from_name }} から {{ to_name }}へのチャット</title>
-    <link rel="stylesheet" href="{{ static_url("style.css") }}"/>
-  </head>
-  <body>
-    <br><br><br>
-    あなたは{{ from_name }}でログインしています。<br>
-    {{ to_name }}　との会話中
 
-      <div class="chat-box">
-        <div class="chat-from">
-          {% for container in containers_from %}
-          <div class="hukidashi">
-            {{ container }}
-          </div>
-          {% end %}
-        </div>
-        <div class="chat-to">
-          {% for container in containers_to %}
-          <div class="hukidashi">
-            {{ container }}
-          </div>
-          {% end %}
-        </div>
+<head>
+  <title>{{ my_name }} から {{ partner_name }}へのチャット</title>
+  <link rel="stylesheet" href="{{ static_url(" style.css ") }}"/>
+</head>
+
+<body>
+  <br><br><br> あなたは{{ my_name }}でログインしています。<br> {{ partner_name }}　との会話中
+
+  <div class="chat-box">
+    <div class="chat-from">
+      {% for container in my_containers %}
+      <div class="hukidashi">
+        {{ container }}
       </div>
-
-
-    <div class="container">
-      <div class="box">
-        <form method="post" action="/{{ to_id }}">
-          <textarea name="body" cols="40" rows="4"></textarea>
-          <input type="submit">
-        </form>
-      </div>
+      {% end %}
     </div>
+    <div class="chat-to">
+      {% for container in partner_containers %}
+      <div class="hukidashi">
+        {{ container }}
+      </div>
+      {% end %}
+    </div>
+  </div>
 
-    <div class="option-box">
-      <div class="option">
-          <button type=button onclick="location.href='/select'">
+
+  <div class="container">
+    <div class="box">
+      <form method="post" action="/{{ partner_id }}">
+        <textarea name="body" cols="40" rows="4"></textarea>
+        <input type="submit">
+      </form>
+    </div>
+  </div>
+
+  <div class="option-box">
+    <div class="option">
+      <button type=button onclick="location.href='/select'">
             相手を選択
           </button>
-      </div>
-      <div class="option">
-          <button type=button onclick="location.href='/logout'">
+    </div>
+    <div class="option">
+      <button type=button onclick="location.href='/logout'">
             ログアウト
           </button>
-      </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>
