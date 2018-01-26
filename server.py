@@ -63,8 +63,9 @@ class ChatHandler(BaseHandler):
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
         partner_contents_query = self.get_content_query_from_db(
             partner_id, my_id)
-        my_containers = []
-        partner_containers = []
+        my_containers = []  #表示させる自分のテキスト
+        partner_containers = []  #表示させる相手のテキスト
+        #リストにテキストを入れないと、クエリのままだと表示できなさそうだったのでリストにする
         for row in my_contents_query:
             my_containers.append(row.content)
         for row in partner_contents_query:
@@ -78,6 +79,7 @@ class ChatHandler(BaseHandler):
         my_user_query = self.get_a_user_query_from_db(
             self.get_user_id(self.get_current_user()))
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        #データ追加
         new_content = Content(from_id=my_user_query.id,
                               to_id=partner_id, content=body, datetime=time_stamp)
         db_session.add(new_content)
@@ -89,6 +91,7 @@ class ChatHandler(BaseHandler):
 class SelectHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
+        #自分以外のUserクエリをUserテーブルから選択
         db_session = maker()
         partner_query = db_session.query(User).filter(
             User.name != self.current_user).all()
