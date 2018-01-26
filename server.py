@@ -1,4 +1,4 @@
-#!/bin/env python
+chat.html#!/bin/env python
 # -*- coding: utf-8 -*-
 import os
 import tornado.ioloop
@@ -19,6 +19,7 @@ class BaseHandler(tornado.web.RequestHandler):
             return None
         return tornado.escape.utf8(username)
 
+    # nameを引数にidを取得
     def get_user_id(self, name):
         db_session = maker()
         user_query = db_session.query(User).filter(
@@ -28,6 +29,7 @@ class BaseHandler(tornado.web.RequestHandler):
             return None
         return user_query.id
 
+    # idを引数にUserクエリを取得
     def get_a_user_query_from_db(self, user_id):
         db_session = maker()
         user_query = db_session.query(User).filter(
@@ -35,6 +37,7 @@ class BaseHandler(tornado.web.RequestHandler):
         db_session.close()
         return user_query
 
+    # 2つのidを引数にContentクエリを取得
     def get_content_query_from_db(self, my_id, partner_id):
         db_session = maker()
         my_contents_query = db_session.query(Content).filter(
@@ -50,7 +53,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.clear_cookie(self.cookie_username)
 
 
-class IndexHandler(BaseHandler):
+class ChatHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self, partner_id):
@@ -66,7 +69,7 @@ class IndexHandler(BaseHandler):
             my_containers.append(row.content)
         for row in partner_contents_query:
             partner_containers.append(row.content)
-        self.render("index.html", my_containers=my_containers, partner_containers=partner_containers,
+        self.render("chat.html", my_containers=my_containers, partner_containers=partner_containers,
                     my_id=my_user_query.id, partner_id=partner_user_query.id, my_name=my_user_query.name, partner_name=partner_user_query.name)
 
     def post(self, partner_id):
@@ -89,7 +92,7 @@ class SelectHandler(BaseHandler):
         db_session = maker()
         partner_query = db_session.query(User).filter(
             User.name != self.current_user).all()
-        self.render("select_player.html",
+        self.render("select_partner.html",
                     username=self.current_user, partners=partner_query)
 
     def post(self):
@@ -134,8 +137,6 @@ class LoginHandler(BaseHandler):
             self.redirect("/select")
         else:
             self.redirect('/create_user/%s' % (username))
-            # self.write('select existing user\n')
-            # self.write_error(403)
 
 
 class LogoutHandler(BaseHandler):
@@ -148,7 +149,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         handlers = [
-            (r'/([0-9]+)', IndexHandler),
+            (r'/([0-9]+)', ChatHandler),
             (r'/login', LoginHandler),
             (r'/logout', LogoutHandler),
             (r'/select', SelectHandler),
