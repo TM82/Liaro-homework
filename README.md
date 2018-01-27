@@ -22,7 +22,7 @@
 
 Send
 
-    `GET /login`
+    GET /login
 
 Received ログインページ(HTML)
 
@@ -30,23 +30,23 @@ Received ログインページ(HTML)
 
 Send
 
-    `POST /login`
-
+    POST /login
+  
     {
         "name":"{ユーザ名}"
     }
 
 Received DBのUserテーブルを参照して、
 
-	nameが存在すればCookieにnameを保存し、/select にリダイレクト
+nameが存在すればCookieにnameを保存し、/select にリダイレクト
 
-	nameが存在しなければ/create_user/{ユーザ名} にリダイレクト
+nameが存在しなければ/create_user/{ユーザ名} にリダイレクト
 
 ログアウト
 
 - Send
 
-    GET /logout
+      GET /logout
 
 - Received Cookieを削除
 
