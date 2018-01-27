@@ -21,85 +21,109 @@
 ログイン画面
 
 - Send
-      GET /login
+
+    GET /login
 
 - Received ログインページ(HTML)
 
 ログイン
 
 - Send
-      POST /login
-      {
-          "name":"{ユーザ名}"
-      }
+
+    POST /login
+
+    {
+        "name":"{ユーザ名}"
+    }
+
 - Received DBのUserテーブルを参照して、
-  	nameが存在すればCookieにnameを保存し、/select にリダイレクト
-  	nameが存在しなければ/create_user/{ユーザ名} にリダイレクト
+
+	nameが存在すればCookieにnameを保存し、/select にリダイレクト
+
+	nameが存在しなければ/create_user/{ユーザ名} にリダイレクト
 
 ログアウト
 
 - Send
-      GET /logout
+
+    GET /logout
 
 - Received Cookieを削除
 
 ユーザ作成画面
 
 - Send
-      GET /create_user/{ユーザ名}
-  {ユーザ名}は、ログインページで存在しないユーザでログインしようとした時にその値を保存して、ユーザ作成画面に表示させるために用意。
+
+    GET /create_user/{ユーザ名}
+
+{ユーザ名}は、ログインページで存在しないユーザでログインしようとした時にその値を保存して、ユーザ作成画面に表示させるために用意。
+
 - Received ユーザ作成画面(HTML)
 
 ユーザ作成
 
 - Send
-      POST /create_user/
-      {
-      	"username":"{ユーザ名}"
-      }
-  
+
+    POST /create_user/
+
+    {
+    	"username":"{ユーザ名}"
+    }
+
 - Received
-  Userテーブルにhtmlから受け取ったユーザを追加して、/login にリダイレクト。
-      {
-      	"id":"{usersのid}",
-      	"username":"{ユーザ名}"
-      }
+
+Userテーブルにhtmlから受け取ったユーザを追加して、/login にリダイレクト。
+
+    {
+    	"id":"{usersのid}",
+    	"username":"{ユーザ名}"
+    }
 
 チャット相手選択画面
 
 - Send
-      GET /select
+
+    GET /select
 
 - Received チャット相手選択画面(HTML)
 
 チャット相手選択
 
 - Send
-      POST /select
-      {
-      	"partner_id": "チャット相手のid"
-      }
+
+    POST /select
+
+    {
+    	"partner_id": "チャット相手のid"
+    }
+
 - Received　partner_idを返して/chat/{parner_id}にリダイレクト。
 
 チャット画面
 
 - Send
-      GET /chat/{チャット相手のid}
+
+    GET /chat/{チャット相手のid}
+
 - Received チャット画面(HTML)
 
 チャット
 
 - Send
-      POST /chat/{チャット相手のid}
-      {
-      	"id": "{contentsのid}",
-      	"from_id": "{発信元のユーザid}",
-      	"to_id": "{発信先のユーザid}",
-      	"content": "{会話のtxtデータ}",
-      	"datetime": "{作成日時}"
-      }
+
+    POST /chat/{チャット相手のid}
+
+    {
+    	"id": "{contentsのid}",
+    	"from_id": "{発信元のユーザid}",
+    	"to_id": "{発信先のユーザid}",
+    	"content": "{会話のtxtデータ}",
+    	"datetime": "{作成日時}"
+    }
+
 - Received
-  Contentテーブルにクエリを追加して、/chat/{チャット相手のid} にリダイレクト。
+
+Contentテーブルにクエリを追加して、/chat/{チャット相手のid} にリダイレクト。
 
 
 
