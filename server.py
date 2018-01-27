@@ -1,4 +1,4 @@
-chat.html#!/bin/env python
+#!/bin/env python
 # -*- coding: utf-8 -*-
 import os
 import tornado.ioloop
@@ -85,7 +85,7 @@ class ChatHandler(BaseHandler):
         db_session.add(new_content)
         db_session.commit()
         db_session.close()
-        self.redirect('/%s' % (partner_id))
+        self.redirect('/chat/%s' % (partner_id))
 
 
 class SelectHandler(BaseHandler):
@@ -100,13 +100,7 @@ class SelectHandler(BaseHandler):
 
     def post(self):
         partner_id = self.get_argument("partner_id")
-        partner_query = self.get_a_user_query_from_db(partner_id)
-        if partner_query:
-            # 1つしかヒットしないのでOK?（同じユーザ名があるとout) > 外部制約で対応
-            self.redirect('/%s' % (partner_query.id))
-        else:
-            self.write("choose existing user\n")
-            self.write_error(403)
+        self.redirect('/chat/%s' % (partner_id))
 
 
 class CreateUserHandler(BaseHandler):
@@ -116,8 +110,6 @@ class CreateUserHandler(BaseHandler):
     def post(self, username):
         username = self.get_argument("username")
         if username == "":
-            print("----------------------------------------------------")
-            print("blank is not allowable.")
             self.redirect('/login')
         else:
             db_session = maker()
@@ -152,7 +144,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         handlers = [
-            (r'/([0-9]+)', ChatHandler),
+            (r'/chat/([0-9]+)', ChatHandler),
             (r'/login', LoginHandler),
             (r'/logout', LogoutHandler),
             (r'/select', SelectHandler),
