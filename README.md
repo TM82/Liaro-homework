@@ -20,23 +20,23 @@
 
 ログイン画面
 
-- Send
+Send
 
-    GET /login
+    `GET /login`
 
-- Received ログインページ(HTML)
+Received ログインページ(HTML)
 
 ログイン
 
-- Send
+Send
 
-    POST /login
+    `POST /login`
 
     {
         "name":"{ユーザ名}"
     }
 
-- Received DBのUserテーブルを参照して、
+Received DBのUserテーブルを参照して、
 
 	nameが存在すればCookieにnameを保存し、/select にリダイレクト
 
