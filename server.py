@@ -1,19 +1,21 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import time
+
+import sqlalchemy as sa
 import tornado.ioloop
 import tornado.web
 from tornado.web import url
-import sqlalchemy as sa
-from settings import maker
+
 from models import User, Content
-import time
+from settings import maker
 
 
 class BaseHandler(tornado.web.RequestHandler):
     cookie_username = "username"  # 初期値？
 
-    def get_current_user(self):
+    def get_current_user(self): #selfではなくcls
         username = self.get_secure_cookie(self.cookie_username)
         if not username:
             return None
@@ -23,7 +25,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def get_user_id(self, name):
         db_session = maker()
         user_query = db_session.query(User).filter(
-            User.name == name).first()
+            User.name == name).first()  #idを保存したほうがuniqueなのでよい
         db_session.close()
         if not user_query:
             return None
@@ -47,7 +49,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def set_current_user(self, username):
         self.set_secure_cookie(self.cookie_username,
-                               tornado.escape.utf8(username))
+                               tornado.escape.utf8(username)) #usernameは値ではなくキー
 
     def clear_current_user(self):
         self.clear_cookie(self.cookie_username)
@@ -55,17 +57,17 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class ChatHandler(BaseHandler):
 
-    @tornado.web.authenticated
+    @tornado.web.authenticated #この時点で
     def get(self, partner_id):
         my_id = self.get_user_id(self.get_current_user())
-        my_user_query = self.get_a_user_query_from_db(my_id)
+        my_user_query = self.get_a_user_query_from_db(my_id)    #今はチャット部分のメソッドでOK
         partner_user_query = self.get_a_user_query_from_db(partner_id)
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
         partner_contents_query = self.get_content_query_from_db(
             partner_id, my_id)
-        my_containers = []  #表示させる自分のテキスト
-        partner_containers = []  #表示させる相手のテキスト
-        #リストにテキストを入れないと、クエリのままだと表示できなさそうだったのでリストにする
+        my_containers = []  # 表示させる自分のテキスト
+        partner_containers = []  # 表示させる相手のテキスト
+        # リストにテキストを入れないと、クエリのままだと表示できなさそうだったのでリストにする
         for row in my_contents_query:
             my_containers.append(row.content)
         for row in partner_contents_query:
@@ -79,11 +81,11 @@ class ChatHandler(BaseHandler):
         my_user_query = self.get_a_user_query_from_db(
             self.get_user_id(self.get_current_user()))
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S')
-        #データ追加
+        # データ追加
         new_content = Content(from_id=my_user_query.id,
                               to_id=partner_id, content=body, datetime=time_stamp)
         db_session.add(new_content)
-        db_session.commit()
+        db_session.commit() #ロールバック処理を入れる（try,except)sasage.model.session commitの前にtry入れてログにエラー出してclose,(finally文でclose)
         db_session.close()
         self.redirect('/chat/%s' % (partner_id))
 
@@ -91,7 +93,7 @@ class ChatHandler(BaseHandler):
 class SelectHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        #自分以外のUserクエリをUserテーブルから選択
+        # 自分以外のUserクエリをUserテーブルから選択
         db_session = maker()
         partner_query = db_session.query(User).filter(
             User.name != self.current_user).all()
@@ -100,7 +102,7 @@ class SelectHandler(BaseHandler):
 
     def post(self):
         partner_id = self.get_argument("partner_id")
-        self.redirect('/chat/%s' % (partner_id))
+        self.redirect('/chat/%s' % (partner_id)) #format文で書いたほうがよい、dictionaryのキーになるものなら大丈夫
 
 
 class CreateUserHandler(BaseHandler):
@@ -110,14 +112,14 @@ class CreateUserHandler(BaseHandler):
     def post(self, username):
         username = self.get_argument("username")
         if username == "":
-            self.redirect('/login')
+            self.redirect('/login') #usernameにリダイレクトのほうが良い
         else:
             db_session = maker()
             new_user = User(name=username)
             db_session.add(new_user)
-            db_session.commit()
+            db_session.commit() #ロールバック処理
             db_session.close()
-            self.redirect('/login')
+            self.redirect('/login') #selectに飛ばす方が優しい
 
 
 class LoginHandler(BaseHandler):
@@ -148,7 +150,7 @@ class Application(tornado.web.Application):
             (r'/login', LoginHandler),
             (r'/logout', LogoutHandler),
             (r'/select', SelectHandler),
-            (r'/create_user/(.*)', CreateUserHandler)
+            (r'/create_user/(.*)', CreateUserHandler)  #英語と数字の制約を入れる
         ]
         settings = dict(
             cookie_secret='gaofjawpoer940r34823842398429afadfi4iiad',

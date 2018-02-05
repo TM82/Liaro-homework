@@ -10,7 +10,7 @@ class User(Base):
     name = Column(String(255), nullable=False, unique=True)
 
     def __repr__(self):
-        return "<User(name='%s')>" % (self.name)
+        return "<User(name='%s')>" % (self.name) #必要ない
 
 class Content(Base):
     __tablename__ = 'contents'
@@ -22,4 +22,4 @@ class Content(Base):
     datetime = Column(DateTime, nullable = False)
 
     def __repr__(self):
-        return "<Content(content='%s')>" % (self.content)
+        return "<Content(content='%s')>" % (self.content) #必要ない
