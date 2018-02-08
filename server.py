@@ -15,30 +15,23 @@ from settings import maker
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    cookie_id = ""
+    cookie_username = "username"
+    cookie_id = "id"
 
     def get_current_user(self): #selfではなくcls
+        username = self.get_secure_cookie(self.cookie_username)
         user_id = self.get_secure_cookie(self.cookie_id)
-        user_id = str(user_id)
-        if not user_id:
+        print(username)
+        print(user_id)
+        if not username:
             return None
-        return tornado.escape.utf8(user_id)
-
-    # nameを引数にidを取得
-    def get_user_id(self, name):
-        db_session = maker()
-        user_query = db_session.query(User).filter(
-            User.name == name).first()  #idを保存したほうがuniqueなのでよい
-        db_session.close()
-        if not user_query:
-            return None
-        return user_query.id
+        return username.decode('utf8'),user_id.decode('utf8')
 
     # idを引数にUserクエリを取得
     def get_a_user_query_from_db(self, user_id):
         db_session = maker()
         user_query = db_session.query(User).filter(
-            User.id == user_id).first()
+            str(User.id) == user_id).first()
         db_session.close()
         return user_query
 
@@ -51,10 +44,11 @@ class BaseHandler(tornado.web.RequestHandler):
         return my_contents_query
 
     def set_current_user(self, user_id):
-        self.set_secure_cookie(str(self.cookie_id),
-                               tornado.escape.utf8(str(user_id))) #usernameは値ではなくキー
+        self.set_secure_cookie(self.cookie_id,
+                               user_id.decode('utf8')) #usernameは値ではなくキー
 
     def clear_current_user(self):
+        self.clear_cookie(self.cookie_username)
         self.clear_cookie(self.cookie_id)
 
 
@@ -62,7 +56,7 @@ class ChatHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self, partner_id):
-        my_id = self.get_current_user()
+        my_id = self.current_user[1]
         my_user_query = self.get_a_user_query_from_db(my_id)    #今はチャット部分のメソッドでOK
         partner_user_query = self.get_a_user_query_from_db(partner_id)
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
@@ -82,7 +76,7 @@ class ChatHandler(BaseHandler):
         db_session = maker()
         body = self.get_argument('body')
         my_user_query = self.get_a_user_query_from_db(
-            self.current_user())
+            self.current_user[1])
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S')
         # データ追加
         new_content = Content(from_id=my_user_query.id,
@@ -105,9 +99,9 @@ class SelectHandler(BaseHandler):
         # 自分以外のUserクエリをUserテーブルから選択
         db_session = maker()
         partner_query = db_session.query(User).filter(
-            User.id != self.current_user).all()
+            User.id != self.current_user[1]).all()
         self.render("select_partner.html",
-                    username=self.current_user, partners=partner_query)
+                    username=self.current_user[0], partners=partner_query)
 
     def post(self):
         partner_id = self.get_argument("partner_id")
@@ -128,7 +122,7 @@ class CreateUserHandler(BaseHandler):
             try:
                 db_session.add(new_user)
                 db_session.commit() #ロールバック処理
-                self.set_current_user(self.get_user_id(username))
+                self.set_current_user(self.current_user[1])
             except Exception as e:
                 db_session.rollback()
                 logging.error(datetime.now())
@@ -144,7 +138,8 @@ class LoginHandler(BaseHandler):
 
     def post(self):
         username = self.get_argument("username")
-        user_id = self.get_user_id(username)
+        print(self.current_user)
+        user_id = self.current_user[1]
         users = self.get_a_user_query_from_db(user_id)
         if users:
             self.set_current_user(user_id)
