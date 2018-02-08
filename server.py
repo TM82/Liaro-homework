@@ -16,48 +16,40 @@ from settings import maker
 
 class BaseHandler(tornado.web.RequestHandler):
     cookie_username = "username"
-    cookie_id = "id"
+    cookie_id = "id"  # cookieでidも管理(一意のため)
 
-    def get_current_user(self): #selfではなくcls
+    def get_current_user(self):
         username = self.get_secure_cookie(self.cookie_username)
         user_id = self.get_secure_cookie(self.cookie_id)
-        print(username)
-        print(user_id)
         if not username:
             return None
-        return username.decode('utf8'),user_id.decode('utf8')
+        return tornado.escape.utf8(username), tornado.escape.utf8(user_id)
+
+    def set_current_user(self, username, user_id):
+        self.set_secure_cookie(self.cookie_username,
+                               tornado.escape.utf8(username))
+        self.set_secure_cookie(self.cookie_id,
+                               tornado.escape.utf8(user_id))
+
+    def clear_current_user(self):
+        self.clear_cookie(self.cookie_username)
+        self.clear_cookie(self.cookie_id)
 
     # idを引数にUserクエリを取得
     def get_a_user_query_from_db(self, user_id):
         db_session = maker()
         user_query = db_session.query(User).filter(
-            str(User.id) == user_id).first()
+            User.id == user_id).first()
         db_session.close()
         return user_query
-
-    # 2つのidを引数にContentクエリを取得
-    def get_content_query_from_db(self, my_id, partner_id):
-        db_session = maker()
-        my_contents_query = db_session.query(Content).filter(
-            Content.from_id == my_id, Content.to_id == partner_id).all()
-        db_session.close()
-        return my_contents_query
-
-    def set_current_user(self, user_id):
-        self.set_secure_cookie(self.cookie_id,
-                               user_id.decode('utf8')) #usernameは値ではなくキー
-
-    def clear_current_user(self):
-        self.clear_cookie(self.cookie_username)
-        self.clear_cookie(self.cookie_id)
 
 
 class ChatHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self, partner_id):
-        my_id = self.current_user[1]
-        my_user_query = self.get_a_user_query_from_db(my_id)    #今はチャット部分のメソッドでOK
+        my_id = self.current_user[1] #my_idはbytesクラス（bytesクラスでもget_a_user_query_from_dbが使えた)
+        my_user_query = self.get_a_user_query_from_db(my_id)
         partner_user_query = self.get_a_user_query_from_db(partner_id)
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
         partner_contents_query = self.get_content_query_from_db(
@@ -72,6 +64,7 @@ class ChatHandler(BaseHandler):
         self.render("chat.html", my_containers=my_containers, partner_containers=partner_containers,
                     my_id=my_user_query.id, partner_id=partner_user_query.id, my_name=my_user_query.name, partner_name=partner_user_query.name)
 
+    @tornado.web.authenticated
     def post(self, partner_id):
         db_session = maker()
         body = self.get_argument('body')
@@ -92,8 +85,17 @@ class ChatHandler(BaseHandler):
             db_session.close()
         self.redirect('/chat/{}'.format(partner_id))
 
+    # 2つのidを引数にContentクエリを取得
+    def get_content_query_from_db(self, my_id, partner_id):
+        db_session = maker()
+        my_contents_query = db_session.query(Content).filter(
+            Content.from_id == my_id, Content.to_id == partner_id).all()
+        db_session.close()
+        return my_contents_query
+
 
 class SelectHandler(BaseHandler):
+
     @tornado.web.authenticated
     def get(self):
         # 自分以外のUserクエリをUserテーブルから選択
@@ -109,6 +111,7 @@ class SelectHandler(BaseHandler):
 
 
 class CreateUserHandler(BaseHandler):
+
     def get(self, username):
         self.render("create_user.html", username=username)
 
@@ -121,7 +124,7 @@ class CreateUserHandler(BaseHandler):
             new_user = User(name=username)
             try:
                 db_session.add(new_user)
-                db_session.commit() #ロールバック処理
+                db_session.commit()
                 self.set_current_user(self.current_user[1])
             except Exception as e:
                 db_session.rollback()
@@ -133,19 +136,28 @@ class CreateUserHandler(BaseHandler):
 
 
 class LoginHandler(BaseHandler):
+
     def get(self):
         self.render("login.html")
 
     def post(self):
         username = self.get_argument("username")
-        print(self.current_user)
-        user_id = self.current_user[1]
+        user_id = self.get_user_id(username)
         users = self.get_a_user_query_from_db(user_id)
         if users:
-            self.set_current_user(user_id)
+            self.set_current_user(username, str(user_id))
             self.redirect("/select")
         else:
             self.redirect('/create_user/{}'.format(username))
+
+    def get_user_id(self, name):
+        db_session = maker()
+        user_query = db_session.query(User).filter(
+            User.name == name).first()
+        db_session.close()
+        if not user_query:
+            return None
+        return user_query.id
 
 
 class LogoutHandler(BaseHandler):
@@ -165,13 +177,13 @@ class Application(tornado.web.Application):
             (r'/create_user/([a-zA-Z0-9]*)', CreateUserHandler)
         ]
         settings = dict(
-            cookie_secret='dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
-            static_path=os.path.join(BASE_DIR, "static"),
-            template_path=os.path.join(BASE_DIR, "templates"),
-            login_url="/login",
+            cookie_secret = 'dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
+            static_path = os.path.join(BASE_DIR, "static"),
+            template_path = os.path.join(BASE_DIR, "templates"),
+            login_url = "/login",
             # xsrf_cookies=True,
             # autoescape="xhtml_escape",
-            debug=True,
+            debug = True,
         )
 
         tornado.web.Application.__init__(self, handlers, **settings)
