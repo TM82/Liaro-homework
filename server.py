@@ -35,6 +35,15 @@ class BaseHandler(tornado.web.RequestHandler):
         self.clear_cookie(self.cookie_username)
         self.clear_cookie(self.cookie_id)
 
+    def get_user_id(self, name):
+        db_session = maker()
+        user_query = db_session.query(User).filter(
+            User.name == name).first()
+        db_session.close()
+        if not user_query:
+            return None
+        return user_query.id
+
     # idを引数にUserクエリを取得
     def get_a_user_query_from_db(self, user_id):
         db_session = maker()
@@ -125,7 +134,7 @@ class CreateUserHandler(BaseHandler):
             try:
                 db_session.add(new_user)
                 db_session.commit()
-                self.set_current_user(self.current_user[1])
+                self.set_current_user(username,str(self.get_user_id(username)))
             except Exception as e:
                 db_session.rollback()
                 logging.error(datetime.now())
@@ -149,15 +158,6 @@ class LoginHandler(BaseHandler):
             self.redirect("/select")
         else:
             self.redirect('/create_user/{}'.format(username))
-
-    def get_user_id(self, name):
-        db_session = maker()
-        user_query = db_session.query(User).filter(
-            User.name == name).first()
-        db_session.close()
-        if not user_query:
-            return None
-        return user_query.id
 
 
 class LogoutHandler(BaseHandler):
