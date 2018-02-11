@@ -1,5 +1,6 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
+import hashlib
 import logging
 import os
 import time
@@ -55,8 +56,8 @@ class ChatHandler(BaseHandler):
         my_id = self.current_user  # my_idはbytesクラス（bytesクラスでもget_a_user_query_from_idが使えた)
         my_user_query = self.get_a_user_query_from_id(my_id)
         partner_user_query = self.get_a_user_query_from_id(partner_id)
-        my_contents_query = self.get_content_query_from_db(my_id, partner_id)
-        partner_contents_query = self.get_content_query_from_db(
+        my_contents_query = self.get_content_query_from_ids(my_id, partner_id)
+        partner_contents_query = self.get_content_query_from_ids(
             partner_id, my_id)
         my_containers = []  # 表示させる自分のテキスト
         partner_containers = []  # 表示させる相手のテキスト
@@ -89,7 +90,7 @@ class ChatHandler(BaseHandler):
         self.redirect('/chat/{}'.format(partner_id))
 
     # 2つのidを引数にContentクエリを取得
-    def get_content_query_from_db(self, my_id, partner_id):
+    def get_content_query_from_ids(self, my_id, partner_id):
         db_session = maker()
         my_contents_query = db_session.query(Content).filter(
             Content.from_id == my_id, Content.to_id == partner_id).all()
@@ -121,12 +122,12 @@ class CreateUserHandler(BaseHandler):
 
     def post(self, username):
         username = self.get_argument("username")
-        password = self.get_argument("password")
+        password = tornado.escape.utf8(self.get_argument("password"))
         if username == "":
             self.redirect('/create_user/')
         else:
             db_session = maker()
-            new_user = User(name=username, passwd=password)
+            new_user = User(name=username, password=hashlib.sha224(password).hexdigest())
             try:
                 db_session.add(new_user)
                 db_session.commit()
@@ -148,11 +149,11 @@ class LoginHandler(BaseHandler):
 
     def post(self):
         username = self.get_argument("username")
-        password = self.get_argument("password")
+        password = tornado.escape.utf8(self.get_argument("password"))
         try:
             user = self.get_a_user_query_from_name(username)
             if user:
-                if user.passwd == password:
+                if user.password == hashlib.sha224(password).hexdigest():
                     self.set_current_user(str(user.id))
                     self.redirect("/select")
                 else:

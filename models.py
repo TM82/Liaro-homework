@@ -8,7 +8,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
-    passwd = Column(String(31), nullable=False)
+    password = Column(String(63), nullable=False)
 
 class Content(Base):
     __tablename__ = 'contents'
