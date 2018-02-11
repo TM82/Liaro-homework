@@ -15,25 +15,25 @@ from settings import maker
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    cookie_username = "username"
-    cookie_id = "id"  # cookieでidも管理(一意のため)
+    cookie_name_key = "username"
+    cookie_id_key = "id"  # cookieでidも管理(一意のため)
 
     def get_current_user(self):
-        username = self.get_secure_cookie(self.cookie_username)
-        user_id = self.get_secure_cookie(self.cookie_id)
+        username = self.get_secure_cookie(self.cookie_name_key)
+        user_id = self.get_secure_cookie(self.cookie_id_key)
         if not username:
             return None
         return tornado.escape.utf8(username), tornado.escape.utf8(user_id)
 
     def set_current_user(self, username, user_id):
-        self.set_secure_cookie(self.cookie_username,
+        self.set_secure_cookie(self.cookie_user_key,
                                tornado.escape.utf8(username))
-        self.set_secure_cookie(self.cookie_id,
+        self.set_secure_cookie(self.cookie_id_key,
                                tornado.escape.utf8(user_id))
 
     def clear_current_user(self):
-        self.clear_cookie(self.cookie_username)
-        self.clear_cookie(self.cookie_id)
+        self.clear_cookie(self.cookie_user_key)
+        self.clear_cookie(self.cookie_id_key)
 
     def get_user_id(self, name):
         db_session = maker()
@@ -152,8 +152,8 @@ class LoginHandler(BaseHandler):
     def post(self):
         username = self.get_argument("username")
         user_id = self.get_user_id(username)
-        users = self.get_a_user_query_from_db(user_id)
-        if users:
+        user = self.get_a_user_query_from_db(user_id)
+        if user:
             self.set_current_user(username, str(user_id))
             self.redirect("/select")
         else:
