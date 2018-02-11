@@ -36,8 +36,7 @@ script_location = migrations
 # output_encoding = utf-8
 
 #sqlalchemy.url = driver://user:pass@localhost/dbname
-#sqlalchemy.url = example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com
-sqlalchemy.url = mysql+pymysql://root:RDmomo.318@example-rds-mysql-server.cwddpv5w3iby.us-east-2.rds.amazonaws.com/exampledb
+
 # Logging configuration
 [loggers]
 keys = root,sqlalchemy,alembic
