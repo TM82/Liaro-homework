@@ -15,37 +15,32 @@ from settings import maker
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    cookie_name_key = "username"
-    cookie_id_key = "id"  # cookieでidも管理(一意のため)
+    cookie_id = "id"  # cookieでidも管理(一意のため)
 
     def get_current_user(self):
-        username = self.get_secure_cookie(self.cookie_name_key)
-        user_id = self.get_secure_cookie(self.cookie_id_key)
-        if not username:
+        user_id = self.get_secure_cookie(self.cookie_id)
+        if not user_id:
             return None
-        return tornado.escape.utf8(username), tornado.escape.utf8(user_id)
+        return tornado.escape.utf8(user_id)
 
-    def set_current_user(self, username, user_id):
-        self.set_secure_cookie(self.cookie_user_key,
-                               tornado.escape.utf8(username))
-        self.set_secure_cookie(self.cookie_id_key,
+    def set_current_user(self, user_id):
+        self.set_secure_cookie(self.cookie_id,
                                tornado.escape.utf8(user_id))
 
     def clear_current_user(self):
-        self.clear_cookie(self.cookie_user_key)
-        self.clear_cookie(self.cookie_id_key)
+        self.clear_cookie(self.cookie_id)
 
-    def get_user_id(self, name):
+    def get_a_user_query_from_name(self, name):
         db_session = maker()
         user_query = db_session.query(User).filter(
             User.name == name).first()
         db_session.close()
         if not user_query:
             return None
-        return user_query.id
+        return user_query
 
     # idを引数にUserクエリを取得
-    def get_a_user_query_from_db(self, user_id):
+    def get_a_user_query_from_id(self, user_id):
         db_session = maker()
         user_query = db_session.query(User).filter(
             User.id == user_id).first()
@@ -57,9 +52,9 @@ class ChatHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self, partner_id):
-        my_id = self.current_user[1] #my_idはbytesクラス（bytesクラスでもget_a_user_query_from_dbが使えた)
-        my_user_query = self.get_a_user_query_from_db(my_id)
-        partner_user_query = self.get_a_user_query_from_db(partner_id)
+        my_id = self.current_user  # my_idはbytesクラス（bytesクラスでもget_a_user_query_from_idが使えた)
+        my_user_query = self.get_a_user_query_from_id(my_id)
+        partner_user_query = self.get_a_user_query_from_id(partner_id)
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
         partner_contents_query = self.get_content_query_from_db(
             partner_id, my_id)
@@ -77,8 +72,8 @@ class ChatHandler(BaseHandler):
     def post(self, partner_id):
         db_session = maker()
         body = self.get_argument('body')
-        my_user_query = self.get_a_user_query_from_db(
-            self.current_user[1])
+        my_user_query = self.get_a_user_query_from_id(
+            self.current_user)
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S')
         # データ追加
         new_content = Content(from_id=my_user_query.id,
@@ -88,8 +83,7 @@ class ChatHandler(BaseHandler):
             db_session.commit()
         except Exception as e:
             db_session.rollback()
-            logging.error(datetime.now())
-            raise e
+            logging.warning(e)
         finally:
             db_session.close()
         self.redirect('/chat/{}'.format(partner_id))
@@ -108,11 +102,12 @@ class SelectHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         # 自分以外のUserクエリをUserテーブルから選択
+        username = self.get_a_user_query_from_id(self.current_user).name
         db_session = maker()
-        partner_query = db_session.query(User).filter(
-            User.id != self.current_user[1]).all()
+        partner_querys = db_session.query(User).filter(
+            User.id != self.current_user).all()
         self.render("select_partner.html",
-                    username=self.current_user[0], partners=partner_query)
+                    username=username, partners=partner_querys)
 
     def post(self):
         partner_id = self.get_argument("partner_id")
@@ -126,18 +121,20 @@ class CreateUserHandler(BaseHandler):
 
     def post(self, username):
         username = self.get_argument("username")
+        password = self.get_argument("password")
         if username == "":
             self.redirect('/create_user/')
         else:
             db_session = maker()
-            new_user = User(name=username)
+            new_user = User(name=username, passwd=password)
             try:
                 db_session.add(new_user)
                 db_session.commit()
-                self.set_current_user(username,str(self.get_user_id(username)))
+                self.set_current_user(
+                    str(self.get_a_user_query_from_name(username).id))
             except Exception as e:
                 db_session.rollback()
-                logging.error(datetime.now())
+                logging.warning(e)
             finally:
                 db_session.close()
 
@@ -151,13 +148,21 @@ class LoginHandler(BaseHandler):
 
     def post(self):
         username = self.get_argument("username")
-        user_id = self.get_user_id(username)
-        user = self.get_a_user_query_from_db(user_id)
-        if user:
-            self.set_current_user(username, str(user_id))
-            self.redirect("/select")
-        else:
-            self.redirect('/create_user/{}'.format(username))
+        password = self.get_argument("password")
+        try:
+            user = self.get_a_user_query_from_name(username)
+            if user:
+                if user.passwd == password:
+                    self.set_current_user(str(user.id))
+                    self.redirect("/select")
+                else:
+                    logging.warning("password is wrong")
+                    self.redirect("/login")
+            else:
+                self.redirect('/create_user/{}'.format(username))
+        except:
+            logging.warning("User: {} does not exist".format(username))
+            self.redirect("/login")
 
 
 class LogoutHandler(BaseHandler):
@@ -177,13 +182,13 @@ class Application(tornado.web.Application):
             (r'/create_user/([a-zA-Z0-9]*)', CreateUserHandler)
         ]
         settings = dict(
-            cookie_secret = 'dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
-            static_path = os.path.join(BASE_DIR, "static"),
-            template_path = os.path.join(BASE_DIR, "templates"),
-            login_url = "/login",
+            cookie_secret='dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
+            static_path=os.path.join(BASE_DIR, "static"),
+            template_path=os.path.join(BASE_DIR, "templates"),
+            login_url="/login",
             # xsrf_cookies=True,
             # autoescape="xhtml_escape",
-            debug = True,
+            debug=True,
         )
 
         tornado.web.Application.__init__(self, handlers, **settings)
