@@ -23,7 +23,7 @@ class BaseHandler(tornado.web.RequestHandler):
             return None
         return tornado.escape.utf8(user_id)
 
-    def set_current_user(self, username, user_id):
+    def set_current_user(self, user_id):
         self.set_secure_cookie(self.cookie_id,
                                tornado.escape.utf8(user_id))
 
@@ -37,7 +37,7 @@ class BaseHandler(tornado.web.RequestHandler):
         db_session.close()
         if not user_query:
             return None
-        return user_query.id
+        return user_query
 
     # idを引数にUserクエリを取得
     def get_a_user_query_from_id(self, user_id):
@@ -52,7 +52,7 @@ class ChatHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self, partner_id):
-        my_id = self.current_user #my_idはbytesクラス（bytesクラスでもget_a_user_query_from_idが使えた)
+        my_id = self.current_user  # my_idはbytesクラス（bytesクラスでもget_a_user_query_from_idが使えた)
         my_user_query = self.get_a_user_query_from_id(my_id)
         partner_user_query = self.get_a_user_query_from_id(partner_id)
         my_contents_query = self.get_content_query_from_db(my_id, partner_id)
@@ -83,7 +83,7 @@ class ChatHandler(BaseHandler):
             db_session.commit()
         except Exception as e:
             db_session.rollback()
-            raise e
+            logging.warning(e)
         finally:
             db_session.close()
         self.redirect('/chat/{}'.format(partner_id))
@@ -121,18 +121,20 @@ class CreateUserHandler(BaseHandler):
 
     def post(self, username):
         username = self.get_argument("username")
+        password = self.get_argument("password")
         if username == "":
             self.redirect('/create_user/')
         else:
             db_session = maker()
-            new_user = User(name=username)
+            new_user = User(name=username, passwd=password)
             try:
                 db_session.add(new_user)
                 db_session.commit()
-                self.set_current_user(self.current_user[1])
+                self.set_current_user(
+                    str(self.get_a_user_query_from_name(username).id))
             except Exception as e:
                 db_session.rollback()
-                raise e
+                logging.warning(e)
             finally:
                 db_session.close()
 
@@ -147,16 +149,20 @@ class LoginHandler(BaseHandler):
     def post(self):
         username = self.get_argument("username")
         password = self.get_argument("password")
-        user_id = self.get_a_user_query_from_name(username).id
-        user = self.get_a_user_query_from_id(user_id)
-        if user:
-            if user.passwd == password:
-                self.set_current_user(str(user_id))
-                self.redirect("/select")
+        try:
+            user = self.get_a_user_query_from_name(username)
+            if user:
+                if user.passwd == password:
+                    self.set_current_user(str(user.id))
+                    self.redirect("/select")
+                else:
+                    logging.warning("password is wrong")
+                    self.redirect("/login")
             else:
-                self.redirect("/login")
-        else:
-            self.redirect('/create_user/{}'.format(username))
+                self.redirect('/create_user/{}'.format(username))
+        except:
+            logging.warning("User: {} does not exist".format(username))
+            self.redirect("/login")
 
 
 
@@ -177,13 +183,13 @@ class Application(tornado.web.Application):
             (r'/create_user/([a-zA-Z0-9]*)', CreateUserHandler)
         ]
         settings = dict(
-            cookie_secret = 'dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
-            static_path = os.path.join(BASE_DIR, "static"),
-            template_path = os.path.join(BASE_DIR, "templates"),
-            login_url = "/login",
+            cookie_secret='dJD8PK6SR6CfDhtoG1K1yphPs52CQ09IjlFYdM6b8Ws=',
+            static_path=os.path.join(BASE_DIR, "static"),
+            template_path=os.path.join(BASE_DIR, "templates"),
+            login_url="/login",
             # xsrf_cookies=True,
             # autoescape="xhtml_escape",
-            debug = True,
+            debug=True,
         )
 
         tornado.web.Application.__init__(self, handlers, **settings)
