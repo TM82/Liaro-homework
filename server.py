@@ -15,20 +15,20 @@ from settings import maker
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    cookie_id = "id"  # cookieでidも管理(一意のため)
+    cookie_id_key = "id"  # cookieでidも管理(一意のため)
 
     def get_current_user(self):
-        user_id = self.get_secure_cookie(self.cookie_id)
+        user_id = self.get_secure_cookie(self.cookie_id_key)
         if not user_id:
             return None
         return tornado.escape.utf8(user_id)
 
     def set_current_user(self, user_id):
-        self.set_secure_cookie(self.cookie_id,
+        self.set_secure_cookie(self.cookie_id_key,
                                tornado.escape.utf8(user_id))
 
     def clear_current_user(self):
-        self.clear_cookie(self.cookie_id)
+        self.clear_cookie(self.cookie_id_key)
 
     def get_a_user_query_from_name(self, name):
         db_session = maker()
